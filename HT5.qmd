@@ -4,9 +4,9 @@ format: html
 editor: visual
 ---
 
-## HT 5 Naive Bayes
+# HT5 - Naive Bayes
 
-```{r}
+```{r librerias}
 library(psych)
 library(dplyr)
 library(ggplot2)
@@ -24,11 +24,112 @@ library(randomForest)
 library(e1071)
 ```
 
-You can add options to executable code like this
+## Cargando los datos
 
-```{r}
-#| echo: false
-2 * 2
+```{r datos}
+set.seed(456)
+
+datos <- read.csv("train.csv")
+datos['YearsBuilt'] = 2023 - datos$YearBuilt
+datos['YearsRem'] = 2023 - datos$YearRemodAdd
+
+numericas <- datos[, c('MSSubClass', 'LotArea', 'OverallQual', 'OverallCond', 'YearsBuilt', 'YearsRem', 'BsmtFinSF1', 'BsmtFinSF2', 'BsmtUnfSF', 'TotalBsmtSF', 'X1stFlrSF', 'X2ndFlrSF', 'LowQualFinSF', 'GrLivArea', 'BsmtFullBath', 'BsmtHalfBath', 'FullBath', 'HalfBath', 'BedroomAbvGr', 'KitchenAbvGr', 'TotRmsAbvGrd', 'Fireplaces', 'GarageCars', 'GarageArea', 'WoodDeckSF', 'OpenPorchSF', 'EnclosedPorch', 'X3SsnPorch', 'ScreenPorch', 'PoolArea', 'MiscVal', 'MoSold', 'SalePrice')]
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+## Muestreo
+
+```{r muestra}
+p <- 0.7
+corte <- sample(nrow(datos), nrow(datos) * p)
+train <- datos[corte,]
+test <- datos[-corte,]
+
+trainNumericas <- numericas[corte,]
+testNumericas <- numericas[-corte,]
+```
+
+## Generando los modelos
+
+### Modelos de regresión
+
+#### Regresión lineal multivariable
+
+```{r }
+mejorModelo <- lm(SalePrice ~ MSSubClass + LotArea + OverallQual + BsmtFinSF1 + 
+    BsmtFinSF2 + TotalBsmtSF + LowQualFinSF + HalfBath + KitchenAbvGr + 
+    TotRmsAbvGrd + Fireplaces + WoodDeckSF + OpenPorchSF + EnclosedPorch + 
+    X3SsnPorch + ScreenPorch + PoolArea + MoSold, data = trainNumericas)
+summary(mejorModelo)
+```
+
+#### Árbol de regresión
+
+```{r arbolRegresion}
+arbol1 <- rpart(SalePrice ~ .,data=trainNumericas)
+rpart.plot(arbol1)
+ventas <- testNumericas$SalePrice
+test2 <- testNumericas[,-81]
+a<-predict(arbol1,newdata=test2)
+b1<-mean(a-test$GrLivArea)
+plot(test$GrLivArea,a,col="green")
+par(new=TRUE)
+plot(test$GrLivArea,test$SalePrice,col="blue")
+```
+
+#### Naive Bayes
+
+### Modelos de clasificación
+
+#### Árbol de decisión
+
+```{r arbolDecision}
+orderPrice <- datos[order(datos$SalePrice),]
+orderPrice['Clasificacion']<- list(1:nrow(orderPrice))
+orderPrice <- orderPrice %>% select(-c(Id, MoSold, YrSold, GarageYrBlt, Alley, LotShape, LandContour, Condition2, YearBuilt, Exterior2nd, FireplaceQu, GarageQual, SaleType,BsmtFinType2, BsmtFinSF2, BsmtUnfSF, BsmtFullBath, BsmtHalfBath, X3SsnPorch, GarageFinish))
+orderPrice <- orderPrice %>% mutate_at (c("MSSubClass","MSZoning", "Utilities", "LotConfig", "Street", "LandSlope", "Neighborhood", "Condition1", "BldgType", "HouseStyle", "OverallQual", "OverallCond", "RoofStyle", "PavedDrive", "RoofMatl", "Exterior1st", "MasVnrType", "ExterQual", "ExterCond","Foundation", "BsmtQual", "BsmtCond", "BsmtExposure", "BsmtFinType1", "Heating", "HeatingQC", "CentralAir","Electrical", "Functional", "GarageType", "GarageCond", "PoolQC", "Fence", "MiscFeature", "SaleCondition"), as.factor)
+
+orderPrice$Clasificacion[orderPrice$SalePrice <= 139000] <- 'Economica'
+
+orderPrice$Clasificacion[orderPrice$SalePrice > 139000 & orderPrice$SalePrice <= 189893 ] <- 'Intermedia'
+
+orderPrice$Clasificacion[orderPrice$SalePrice > 189893] <- 'Cara'
+
+orderPrice <- orderPrice%>%mutate_at(c("Clasificacion"),as.factor)
+set.seed(456)
+economicas <- orderPrice[orderPrice$Clasificacion == 'Economica',]
+intermedias <- orderPrice[orderPrice$Clasificacion == 'Intermedia',]
+caras <- orderPrice[orderPrice$Clasificacion == 'Cara',]
+
+filasCasasE <- sample(nrow(economicas), nrow(economicas)*0.7)
+filasCasasI <- sample(nrow(intermedias), nrow(intermedias)*0.7)
+filasCasasC <- sample(nrow(caras), nrow(caras)*0.7)
+
+train <- rbind(economicas[filasCasasE,], intermedias[filasCasasI,], caras[filasCasasC,])
+test <- rbind(economicas[-filasCasasE,], intermedias[-filasCasasI,], caras[-filasCasasC,])
+
+y<- test[,"Clasificacion"]
+dataResp <- test
+test <- test%>% select(-c("SalePrice", "Clasificacion"))
+
+train <- train %>% select(-c("SalePrice"))
+
+modeloClasificacion <- rpart(Clasificacion~., train, method = "class")
+rpart.plot(modeloClasificacion)
+
+ypred <- predict(modeloClasificacion, newdata = test)
+ypred <- apply(ypred, 1, function(x) colnames(ypred)[which.max(x)])
+ypred <- factor(ypred)
+
+
+plot(ypred , col="green",density=20,angle=135)
+plot(y, col="blue",density=20,angle=45,add=TRUE, beside = TRUE)
+legend("bottom",
+c("Predicción del modelo","Datos reales"),
+fill=c("green","blue"))
+
+confusionMatrix(ypred, y)
+```
+
+#### Naive Bayes
+
+### Validación cruzada
