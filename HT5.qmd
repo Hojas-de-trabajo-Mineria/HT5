@@ -30,6 +30,7 @@ library(e1071)
 set.seed(456)
 
 datos <- read.csv("train.csv")
+
 datos['YearsBuilt'] = 2023 - datos$YearBuilt
 datos['YearsRem'] = 2023 - datos$YearRemodAdd
 
@@ -131,5 +132,35 @@ confusionMatrix(ypred, y)
 ```
 
 #### Naive Bayes
+
+```{r}
+modeloNB<-naiveBayes(Clasificacion~.,data=train)
+predNB<- predict(modeloNB,newdata = test)
+
+predNB <- factor(predNB)
+
+plot(predNB , col="green",density=20,angle=135)
+plot(y, col="blue", density=20,angle=45,add=TRUE, beside = TRUE)
+legend("bottom",
+c("Predicción del modelo","Datos reales"),
+fill=c("green","blue"))
+
+confusionMatrix(predNB, y)
+```
+
+Veamos que la predicción de este modelo es peor a la del árbol de claasficiación. Al igual que el anterior, tiene una mayor facilidad para clasificar las casas de los niveles extremos, pero podemos ver que se confunde más con las casas de precio Intermedio. Se puede ver de manera bastante clara en la gráfica, sin embargo notemos que el árbol de clasificación es igualmente solo 2.5% más eficiente que el Naive Bayes. Una ventaja del Naive Bayes en este caso es que es más fácil ver en dónde se está equivocando de manera gráfica, a diferencia del árbol de clasificación.
+
+#### Overfitting 
+
+```{r}
+modeloNBp<-naiveBayes(Clasificacion~.,data=train)
+predNBp<- predict(modeloNBp,newdata = train[,-61])
+
+predNBp <- factor(predNBp)
+
+confusionMatrix(predNBp, train$Clasificacion)
+```
+
+Veamos que la eficiencia del modelo con los datos de entrenamiento es solo $3.5%$ más eficiente que con los datos de prueba, por lo que podemos descartar el overfitting como problema del modelo
 
 ### Validación cruzada
