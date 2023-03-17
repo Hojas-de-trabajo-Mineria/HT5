@@ -4,16 +4,24 @@ format: html
 editor: visual
 ---
 
-## Quarto
-
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
-
-## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+## HT 5 Naive Bayes
 
 ```{r}
-1 + 1
+library(psych)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(psych)
+library(corrplot)
+library(RColorBrewer)
+library(nortest)
+library(lmtest)
+library(jtools)
+library(rpart)
+library(rpart.plot)
+library(caret)
+library(randomForest)
+library(e1071)
 ```
 
 You can add options to executable code like this
