@@ -53,6 +53,22 @@ testNumericas <- numericas[-corte,]
 
 ### Modelos de regresión
 
+```{r}
+modeloRegresion<-naiveBayes(train$SalePrice~., data=train)
+predBayes1<-as.numeric(levels(predict(modeloRegresion,newdata = test)))[1:439]
+error<-mean(predBayes1-test$GrLivArea)
+plot(test$GrLivArea,predBayes1,col="green")
+par(new=TRUE)
+plot(test$GrLivArea,test$SalePrice,col="blue")
+```
+
+con los precios bajos le fue bastante bien, aunque tuvo dificultad con los precios altos con el arbol de regresion de la ves pasada tuvimos un error promedio de 181943 y con este tuvimos 160389, lo cual representa una mejora
+
+
+
+
+
+
 #### Regresión lineal multivariable
 
 ```{r }
