@@ -54,7 +54,6 @@ testNumericas <- numericas[-corte,]
 
 ### Modelos de regresión
 
-
 #### Regresión lineal multivariable
 
 ```{r rlm}
@@ -99,7 +98,8 @@ con los precios bajos le fue bastante bien, aunque tuvo dificultad con los preci
 ```{r arbolDecision}
 orderPrice <- datos[order(datos$SalePrice),]
 orderPrice['Clasificacion']<- list(1:nrow(orderPrice))
-orderPrice <- orderPrice %>% select(-c(Id, MoSold, YrSold, GarageYrBlt, Alley, LotShape, LandContour, Condition2, YearBuilt, Exterior2nd, FireplaceQu, GarageQual, SaleType,BsmtFinType2, BsmtFinSF2, BsmtUnfSF, BsmtFullBath, BsmtHalfBath, X3SsnPorch, GarageFinish))
+
+orderPrice <- orderPrice %>% dplyr::select(-c(Id, MoSold, YrSold, GarageYrBlt, Alley, LotShape, LandContour, Condition2, YearBuilt, Exterior2nd, FireplaceQu, GarageQual, SaleType,BsmtFinType2, BsmtFinSF2, BsmtUnfSF, BsmtFullBath, BsmtHalfBath, X3SsnPorch, GarageFinish))
 orderPrice <- orderPrice %>% mutate_at (c("MSSubClass","MSZoning", "Utilities", "LotConfig", "Street", "LandSlope", "Neighborhood", "Condition1", "BldgType", "HouseStyle", "OverallQual", "OverallCond", "RoofStyle", "PavedDrive", "RoofMatl", "Exterior1st", "MasVnrType", "ExterQual", "ExterCond","Foundation", "BsmtQual", "BsmtCond", "BsmtExposure", "BsmtFinType1", "Heating", "HeatingQC", "CentralAir","Electrical", "Functional", "GarageType", "GarageCond", "PoolQC", "Fence", "MiscFeature", "SaleCondition"), as.factor)
 
 orderPrice$Clasificacion[orderPrice$SalePrice <= 139000] <- 'Economica'
@@ -123,9 +123,9 @@ test <- rbind(economicas[-filasCasasE,], intermedias[-filasCasasI,], caras[-fila
 
 y<- test[,"Clasificacion"]
 dataResp <- test
-test <- test%>% select(-c("SalePrice", "Clasificacion"))
+test <- test%>% dplyr::select(-c("SalePrice", "Clasificacion"))
 
-train <- train %>% select(-c("SalePrice"))
+train <- train %>% dplyr::select(-c("SalePrice"))
 
 modeloClasificacion <- rpart(Clasificacion~., train, method = "class")
 rpart.plot(modeloClasificacion)
@@ -174,25 +174,25 @@ predNBp <- factor(predNBp)
 confusionMatrix(predNBp, train$Clasificacion)
 ```
 
-Veamos que la eficacia del modelo con los datos de entrenamiento es solo $3.5%$ más eficaz que con los datos de prueba, por lo que podemos descartar el overfitting como problema del modelo
+Veamos que la eficacia del modelo con los datos de entrenamiento es solo $3.5\%$ más eficaz que con los datos de prueba, por lo que podemos descartar el overfitting como problema del modelo
 
 ### Validación cruzada
 
 ```{r nbcv}
-tc <- trainControl(method = 'cv', number = 10, verboseIter = T)
+tc <- trainControl(method = 'cv', number =10, verboseIter = T)
 
 sapply(lapply(train, unique), length)
 colSums(is.na(train))
 
-traincv <- train[, -c(6, 38, 39, 40, 41, 45, 47, 55, 56, 57)]
+traincv <- train[, -c(6, 38, 39, 40, 41, 45, 47, 55, 56)]
 testcv <- test[, -c(6, 38, 39, 40, 41, 45, 47, 55, 56, 57)]
 
 traincv <- traincv %>% mutate_at(c('LotArea', 'YearsBuilt', 'YearsRem', 'BsmtFinSF1', 'TotalBsmtSF', 'X1stFlrSF', 'X2ndFlrSF', 'LowQualFinSF', 'GrLivArea', 'TotRmsAbvGrd', 'GarageArea', 'WoodDeckSF', 'OpenPorchSF', 'EnclosedPorch', 'ScreenPorch', 'MiscVal'), scale)
 testcv <- testcv %>% mutate_at(c('LotArea', 'YearsBuilt', 'YearsRem', 'BsmtFinSF1', 'TotalBsmtSF', 'X1stFlrSF', 'X2ndFlrSF', 'LowQualFinSF', 'GrLivArea', 'TotRmsAbvGrd', 'GarageArea', 'WoodDeckSF', 'OpenPorchSF', 'EnclosedPorch', 'ScreenPorch', 'MiscVal'), scale)
 
-set.seed(456)
-mcv <- caret::train(traincv$Clasificacion ~., data = traincv[, -53], method = 'nb', trControl = tc, na.action = na.omit)
+#set.seed(456)
+#mcv <- train(traincv$Clasificacion ~., data = traincv[, -53], method = 'nb', trControl = tc, na.action = na.omit)
 
-y2pred <- predict(mcv, newdata = test)
-confusionMatrix(y2pred, y)
+#y2pred <- predict(mcv, newdata = test)
+# confusionMatrix(y2pred, y)
 ```
