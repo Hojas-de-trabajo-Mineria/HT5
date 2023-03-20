@@ -22,6 +22,7 @@ library(rpart.plot)
 library(caret)
 library(randomForest)
 library(e1071)
+library(klaR)
 ```
 
 ## Cargando los datos
@@ -53,7 +54,7 @@ testNumericas <- numericas[-corte,]
 
 ### Modelos de regresión
 
-```{r}
+```{r rnb}
 modeloRegresion<-naiveBayes(train$SalePrice~., data=train)
 predBayes1<-as.numeric(levels(predict(modeloRegresion,newdata = test)))[1:439]
 error<-mean(predBayes1-test$GrLivArea)
@@ -64,14 +65,9 @@ plot(test$GrLivArea,test$SalePrice,col="blue")
 
 con los precios bajos le fue bastante bien, aunque tuvo dificultad con los precios altos con el arbol de regresion de la ves pasada tuvimos un error promedio de 181943 y con este tuvimos 160389, lo cual representa una mejora
 
-
-
-
-
-
 #### Regresión lineal multivariable
 
-```{r }
+```{r rlm}
 mejorModelo <- lm(SalePrice ~ MSSubClass + LotArea + OverallQual + BsmtFinSF1 + 
     BsmtFinSF2 + TotalBsmtSF + LowQualFinSF + HalfBath + KitchenAbvGr + 
     TotRmsAbvGrd + Fireplaces + WoodDeckSF + OpenPorchSF + EnclosedPorch + 
@@ -166,7 +162,7 @@ confusionMatrix(predNB, y)
 
 Veamos que la predicción de este modelo es peor a la del árbol de claasficiación. Al igual que el anterior, tiene una mayor facilidad para clasificar las casas de los niveles extremos, pero podemos ver que se confunde más con las casas de precio Intermedio. Se puede ver de manera bastante clara en la gráfica, sin embargo notemos que el árbol de clasificación es igualmente solo 2.5% más eficiente que el Naive Bayes. Una ventaja del Naive Bayes en este caso es que es más fácil ver en dónde se está equivocando de manera gráfica, a diferencia del árbol de clasificación.
 
-#### Overfitting 
+#### Overfitting
 
 ```{r}
 modeloNBp<-naiveBayes(Clasificacion~.,data=train)
@@ -177,6 +173,25 @@ predNBp <- factor(predNBp)
 confusionMatrix(predNBp, train$Clasificacion)
 ```
 
-Veamos que la eficiencia del modelo con los datos de entrenamiento es solo $3.5%$ más eficiente que con los datos de prueba, por lo que podemos descartar el overfitting como problema del modelo
+Veamos que la eficacia del modelo con los datos de entrenamiento es solo $3.5%$ más eficaz que con los datos de prueba, por lo que podemos descartar el overfitting como problema del modelo
 
 ### Validación cruzada
+
+```{r nbcv}
+tc <- trainControl(method = 'cv', number = 10, verboseIter = T)
+
+sapply(lapply(train, unique), length)
+colSums(is.na(train))
+
+traincv <- train[, -c(6, 38, 39, 40, 41, 45, 47, 55, 56, 57)]
+testcv <- test[, -c(6, 38, 39, 40, 41, 45, 47, 55, 56, 57)]
+
+traincv <- traincv %>% mutate_at(c('LotArea', 'YearsBuilt', 'YearsRem', 'BsmtFinSF1', 'TotalBsmtSF', 'X1stFlrSF', 'X2ndFlrSF', 'LowQualFinSF', 'GrLivArea', 'TotRmsAbvGrd', 'GarageArea', 'WoodDeckSF', 'OpenPorchSF', 'EnclosedPorch', 'ScreenPorch', 'MiscVal'), scale)
+testcv <- testcv %>% mutate_at(c('LotArea', 'YearsBuilt', 'YearsRem', 'BsmtFinSF1', 'TotalBsmtSF', 'X1stFlrSF', 'X2ndFlrSF', 'LowQualFinSF', 'GrLivArea', 'TotRmsAbvGrd', 'GarageArea', 'WoodDeckSF', 'OpenPorchSF', 'EnclosedPorch', 'ScreenPorch', 'MiscVal'), scale)
+
+set.seed(456)
+mcv <- caret::train(traincv$Clasificacion ~., data = traincv[, -53], method = 'nb', trControl = tc, na.action = na.omit)
+
+y2pred <- predict(mcv, newdata = test)
+confusionMatrix(y2pred, y)
+```
